@@ -21,11 +21,19 @@ public class Main {
 	public static ArrayList<Artist> artistList;
 	public static int count=0;
 
+    static File dir = new File(".");
+    static String locArtistis;
+
+    static FileWriter fstreamArtists;
+    static BufferedWriter outArtists;
+
 	public static void main(String[] args) throws IOException {
 		 
 		File dir = new File(".");
 		String loc = dir.getCanonicalPath() + File.separator + "record.txt";
-		
+
+        openArtistJson();
+
 		File file = new File(loc);
 		file.delete();
 		
@@ -37,7 +45,8 @@ public class Main {
 		artistList = new ArrayList<Artist>();
  
 		processPage("http://g1.globo.com/musica/agenda.html", 1);
-		
+
+        closeArtistJson();
 		//writeArtistList();
  
 		/*file = new File(loc);
@@ -54,7 +63,8 @@ public class Main {
 		FileInputStream fis = new FileInputStream(fin);
 		// //Construct the BufferedReader object
 		BufferedReader in = new BufferedReader(new InputStreamReader(fis));
- 
+
+
 		String aLine = null;
 		while ((aLine = in.readLine()) != null) {
 			// //Process each line
@@ -110,7 +120,7 @@ public class Main {
 		// check existance
 		boolean e = checkExist(URL, file);
 		if (!e) {
-			if(round == 1) openArtistJson();
+
 			//System.out.println("------ :  " + URL);
 			// insert to file
 			FileWriter fstream = new FileWriter(loc, true);
@@ -123,7 +133,7 @@ public class Main {
 			try {
 				doc = Jsoup.connect(URL).timeout(120*1000).get();
 			} catch (IOException e1) {
-				e1.printStackTrace();
+				//e1.printStackTrace();
 				return;
 			}
  
@@ -143,10 +153,19 @@ public class Main {
 				listInfo.add(splitData[2]);
 				listInfo.add(splitData[3]);
 				listInfo.add(splitData[4]);
-				
+
+				String picture = getPicture(doc);
+
+				listInfo.add(picture);
+
 				String info = "", ingressos="", classificacao="";
 				
 				String[] splitInfo = doc.text().split("Informações");
+
+				String horaShow = getHourShow(splitInfo[0]);
+
+				listInfo.add(horaShow);
+
 				if(splitInfo[1].contains("Ingressos")){
 					String[] splitIngressos = splitInfo[1].split("Ingressos");
 					info = splitIngressos[0];
@@ -218,7 +237,7 @@ public class Main {
 				
 			}
 			
-			if(round==1)closeArtistJson();
+			//if(round==1)closeArtistJson();
 		} else {
 			// do nothing
 			return;
@@ -226,7 +245,7 @@ public class Main {
  
 	}
 	
-	public static Artist getArtist(ArrayList<String> list){
+	public static Artist getArtist(ArrayList<String> list) {
 		ArrayList<Artist> artistList = new ArrayList<Artist>();
 		Artist artist = new Artist();
 		
@@ -235,9 +254,11 @@ public class Main {
 		artist.setCidade(list.get(2));
 		artist.setEstado(list.get(3));
 		artist.setDataShow(list.get(4));
-		artist.setLocal(list.get(5));
-		artist.setIngressos(list.get(6));
-		artist.setClassificacao(list.get(7));
+        artist.setPicture(list.get(5));
+        artist.setHoraShow(list.get(6));
+		artist.setLocal(list.get(7));
+		artist.setIngressos(list.get(8));
+		artist.setClassificacao(list.get(9));
 		String date = getDate();
 		artist.setDataExtracao(date.substring(0, 10));
 		artist.setHoraExtracao(date.substring(11));
@@ -253,6 +274,15 @@ public class Main {
 		return artist;
 		
 	}
+
+	public static String getPicture(Document doc) {
+		Element pic = doc.body().getElementsByClass("borda-arredondada").first();
+		return pic.attr("src");
+	}
+
+	public static String getHourShow(String text) {
+		return text.substring(text.length()-6, text.length()).trim();
+	}
 	
 	public static String getDate(){
 		DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
@@ -263,46 +293,45 @@ public class Main {
 	}
 	
 	public static void openArtistJson(){
-		File dir = new File(".");
-		String loc;
-		
-		FileWriter fstream;
-		try {
-			loc = dir.getCanonicalPath() + File.separator + "artistList.txt";
-			File file = new File(loc);
-			file.delete();
-			
-			fstream = new FileWriter(loc, true);
-			BufferedWriter out = new BufferedWriter(fstream);
-			out.write("[");
-			//out.newLine();
-			out.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		
+
+        try {
+            locArtistis = dir.getCanonicalPath() + File.separator + "artistList.txt";
+            new File(locArtistis).delete();
+            fstreamArtists = new FileWriter(locArtistis, true);
+            outArtists = new BufferedWriter(fstreamArtists);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
 	}
 	
 	public static void closeArtistJson(){
-			
-		File dir = new File(".");
-		String loc;
-		
-		FileWriter fstream;
-		try {
-			loc = dir.getCanonicalPath() + File.separator + "artistList.txt";
-			
-			fstream = new FileWriter(loc, true);
-			BufferedWriter out = new BufferedWriter(fstream);
-			out.write("{} ]");
-			//out.newLine();
-			out.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+
+
+        try {
+            outArtists.close();
+            fstreamArtists.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+//		File dir = new File(".");
+//		String loc;
+//
+//		FileWriter fstream;
+//		try {
+//			loc = dir.getCanonicalPath() + File.separator + "artistList.txt";
+//
+//			fstream = new FileWriter(loc, true);
+//			BufferedWriter out = new BufferedWriter(fstream);
+//			out.write("{} ]");
+//			//out.newLine();
+//			out.close();
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		
 	}
 	
@@ -318,9 +347,10 @@ public class Main {
 
 			FileWriter fstream = new FileWriter(loc, true);
 			BufferedWriter out = new BufferedWriter(fstream);
-			out.write(artist.toString() + ",");
-			//out.newLine();
-			out.close();
+			out.write(artist.toString());
+			out.newLine();
+            out.flush();
+            fstream.flush();
 			
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block

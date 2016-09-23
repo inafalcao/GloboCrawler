@@ -8,9 +8,28 @@ public class Artist extends ObjectJson{
 	protected String dataShow;
 	protected String local;
 	protected String ingressos;
+
+	public String getPicture() {
+		return picture;
+	}
+
+	public void setPicture(String picture) {
+		this.picture = picture;
+	}
+
+	public String getHoraShow() {
+		return horaShow;
+	}
+
+	public void setHoraShow(String horaShow) {
+		this.horaShow = horaShow;
+	}
+
 	protected String classificacao;
 	protected String dataExtracao;
 	protected String horaExtracao;
+	protected String picture;
+	protected String horaShow;
 	
 	
 	public Artist() {

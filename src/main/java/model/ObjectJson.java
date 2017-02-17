@@ -1,3 +1,5 @@
+package model;
+
 import java.lang.reflect.Field;
 import java.util.Date;
 
@@ -25,7 +27,7 @@ public class ObjectJson {
                     String fName = f.getName();
                     sb.append( "\"" + fName + "\"" + ":" + "\"" + f.get(this) + "\"");  //coloca da forma "nomeCampo":"valorCampo"
                     i++;
-                }/*else if(f.getType().isAssignableFrom(ObjectJson.class)){
+                }/*else if(f.getType().isAssignableFrom(model.ObjectJson.class)){
 
                 }*/
 

@@ -1,5 +1,8 @@
+package model;
 
-public class Artist extends ObjectJson{
+import model.ObjectJson;
+
+public class Artist extends ObjectJson {
 	protected String nome;
 	protected String nomeShow;
 	protected String pais;

@@ -1,6 +1,14 @@
 # GloboCrawler
 
 
+
+## [Exame](http://visiteceara.com/calendario-de-eventos)
+
+#### Cons
+* Não possui imagem
+* Alguns eventos não tem quase nenhuma info
+
+
 ## [Exame](http://exame.abril.com.br/eventos/)
 
 #### Pros

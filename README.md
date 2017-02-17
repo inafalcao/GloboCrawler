@@ -2,7 +2,7 @@
 
 
 
-## [Exame](http://visiteceara.com/calendario-de-eventos)
+## [Visita Ceará](http://visiteceara.com/calendario-de-eventos)
 
 #### Cons
 * Não possui imagem

@@ -5,27 +5,31 @@ import java.util.List;
 /**
  * Created by inafalcao on 2/19/17.
  */
-public class Event {
+public class Event extends ObjectJson {
 
-    private String name; // required
-    private String censorship; // required
-    private String bengin; // required
-    private String end; // required
-    private String beginSales; // required
-    private String endSales; // required
-    private long eventTypeId; // required / hard code
-    private long producerId; // required / hard code
-    private String release; // required
-    private long localId; // required
-    private String photoBannerPrefix; // required
-    private String photoBannerSuffix; // required
-    private long cityId; // required
-    private String cityName; // required
-    private String cityUF; // required
-    private boolean onlyExhibition; // required
-    private List<String> categories; // required
-    private int statusId; // required
-    // private int blueprintId;
+    public String name; // required
+    public String censorship; // required
+    public String bengin; // required
+    public String end; // required
+    public String beginSales; // required
+    public String endSales; // required
+    public long eventTypeId; // required / hard code
+    public long producerId; // required / hard code
+    public String release; // required
+    public long localId; // required
+    public String photoBannerPrefix; // required
+    public String photoBannerSuffix; // required
+    public long cityId; // required
+    public String cityName; // required
+    public String cityUF; // required
+    public boolean onlyExhibition; // required
+    public List<String> categories; // required
+    public int statusId; // required
+
+
+    // Estes são como campos transientes
+    public Local local;
+    public String banner;
 
     public Event() {
 
@@ -173,5 +177,21 @@ public class Event {
 
     public void setStatusId(int statusId) {
         this.statusId = statusId;
+    }
+
+    public void setLocal(Local local) {
+        this.local = local;
+    }
+
+    public Local getLocal() {
+        return this.local;
+    }
+
+    public void setBanner(String banner) {
+        this.banner = banner;
+    }
+
+    public String getBanner() {
+        return this.banner;
     }
 }

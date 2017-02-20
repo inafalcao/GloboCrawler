@@ -1,7 +1,9 @@
 package sites.feiras_e_negocios;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import enumeration.Mes;
 import model.Artist;
+import model.Event;
 import model.Local;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -14,6 +16,7 @@ import java.io.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 
@@ -47,38 +50,15 @@ public class FeirasENegociosCrawler {
 
         artistList = new ArrayList<Artist>();
 
-        processListPage("http://feirasenegocios.com.br/eventos/", 1);
+        processListPage("http://feirasenegocios.com.br/eventos/", 1, null);
 
         closeArtistJson();
     }
 
-    // givn a String, and a File
-    // return if the String is contained in the File
-    public static boolean checkExist(String s, File fin) throws IOException {
-
-        FileInputStream fis = new FileInputStream(fin);
-        // //Construct the BufferedReader object
-        BufferedReader in = new BufferedReader(new InputStreamReader(fis));
-
-        String aLine = null;
-        while ((aLine = in.readLine()) != null) {
-            // //Process each line
-            if (aLine.trim().contains(s)) {
-                //System.out.println("contains " + s);
-                in.close();
-                fis.close();
-                return true;
-            }
+    public void processListPage(String URL, int round, List<Event> events) throws IOException {
+        if(events == null) {
+            events = new ArrayList<Event>();
         }
-
-        // do not forget to close the buffer reader
-        in.close();
-        fis.close();
-
-        return false;
-    }
-
-    public void processListPage(String URL, int round) throws IOException {
 
         String pageURL = URL + "?page=" + round;
 
@@ -87,30 +67,30 @@ public class FeirasENegociosCrawler {
         try {
             doc = Jsoup.connect(pageURL).userAgent("Mozilla").timeout(120*1000).get();
         } catch (IOException e1) {
+            // páginas acabaram, então salvar no arquivo
+            writeEvents(events);
             return;
         }
 
-        String test = Mes.getZeroedMonthByName("Fevereiro");
+        //String test = Mes.getZeroedMonthByName("Fevereiro");
 
         Elements linksElements = doc.getElementsByClass("read-more-button");
         List<String> links = new ArrayList<String>();
         for(Element link : linksElements) {
             String mLink = link.attr("abs:href");
-            processEventPage(mLink);
+            events.add(processEventPage(mLink));
         }
 
-
-
-        processListPage(URL, round + 1);
+        processListPage(URL, round + 1, events);
     }
 
-    public void processEventPage(String url) {
+    public Event processEventPage(String url) {
 
         Document doc = null;
         try {
             doc = Jsoup.connect(url).userAgent("Mozilla").timeout(120*1000).get();
         } catch (IOException e1) {
-            return;
+            return null;
         }
 
         String eventName = doc.getElementsByClass("title").text();
@@ -120,6 +100,24 @@ public class FeirasENegociosCrawler {
         String dateBegin = eventDateTime.getLeft();
         String dateEnd = eventDateTime.getRight();
         Local eventLocal = getEventLocal(doc);
+
+        Event event = new Event();
+        event.setName(eventName);
+        event.setRelease(eventDescription);
+        event.setBengin(dateBegin);
+        event.setEnd(dateEnd);
+        event.setBeginSales(dateBegin);
+        event.setEndSales(dateEnd);
+        event.setCensorship("livre");
+        event.setOnlyExhibition(true);
+        // todo: categorias
+        
+
+        // Os 'transientes'
+        event.setBanner(eventPicture);
+        event.setLocal(eventLocal);
+
+        return event;
     }
 
     private String getEventDesctiption(Document doc) {
@@ -147,52 +145,85 @@ public class FeirasENegociosCrawler {
      */
     private Tuple<String, String> getEventDateTime(Document doc) {
         // Das 10h às 19h: 10 de Março a 19 de Março de 2017
+        Elements times = doc.select("time");
 
-        // Left = beginTime; Right = endTime
-        Tuple<String, String> tuple = new Tuple<String, String>("", "");
+        // Left = from, Rigth = to
+        Tuple<String, String> date = parseDate(times.first().html());
+        Tuple<String, String> time = parseTime(times);
 
+        String beginDate = date.getLeft() + "T" + time.getLeft();
+        String endDate = date.getRight() + "T" + time.getRight();
 
-        return tuple;
+        return new Tuple<String, String>(beginDate, endDate);
     }
 
     private Local getEventLocal(Document doc) {
-        Element location = doc.select("article").first();
-        String locationName = location.select("strong").first().html();
-        location.select("strong").first().remove();
+        Element location = doc.select("address").first();
+        String locationName = location.select("b").first().html();
+        location.select("b").first().remove();
 
-        String theRest = location.html();
-        // parse somehow
-        return new Local();
+        String rawAddress = location.text();
+        String[] rawAddressArray = rawAddress.split("CEP:");
+        String address = rawAddressArray[0];
+        String cep = rawAddressArray[1].replace("-", "").trim();
+
+        // Assumindo que tudo está em SP (e tá mesmo) porque não tem padrão nessa string do endereço
+        String city = "São Paulo";
+
+        // E aí?
+        Local local = new Local();
+        local.setAddress(address);
+        local.setPostalCode(Long.parseLong(cep));
+        local.setCity(city);
+        local.setState(city); // só porque é sp, né.
+
+        return local;
     }
 
-    public static Artist getArtist(ArrayList<String> list) {
-        ArrayList<Artist> artistList = new ArrayList<Artist>();
-        Artist artist = new Artist();
+    /**
+     * Converte uma data no seguinte formato '07 de Março a 10 de Março de 2017'
+     * para duas datas no formato 'yyyy-MM-dd'
+     * @param date
+     * @return
+     */
+    public Tuple<String, String> parseDate(String date) {
+        String[] tokens = date.split(" ");
 
-        artist.setNome(list.get(0));
-        artist.setNomeShow(list.get(1));
-        artist.setCidade(list.get(2));
-        artist.setEstado(list.get(3));
-        artist.setDataShow(list.get(4));
-        artist.setPicture(list.get(5));
-        artist.setHoraShow(list.get(6));
-        artist.setLocal(list.get(7));
-        artist.setIngressos(list.get(8));
-        artist.setClassificacao(list.get(9));
-        String date = getDate();
-        artist.setDataExtracao(date.substring(0, 10));
-        artist.setHoraExtracao(date.substring(11));
+        String year = tokens[8];
+        // yyyy-MM-dd
+        String from = year + "-" + Mes.getZeroedMonthByName(tokens[2]) + "-" + tokens[0];
+        String to  = year  + "-" + Mes.getZeroedMonthByName(tokens[6]) + "-" + tokens[4];
 
-		/*try {
-			String rank = processPageVagalume("http://www.vagalume.com.br/"+ artist.getNome().replace(" ", "-").replace("&", "e").toLowerCase() +"/popularidade/");
-			artist.setRank(rank);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}*/
+        return new Tuple<String, String>(from, to);
+    }
 
-        return artist;
+    public Tuple<String, String> parseTime(Elements doc) {
+        String firstTime = "";
+        String lastTime = "";
 
+        // Das 10h às 20h: 07 de Março a 9 de Março de 2017
+        String first = doc.get(1).html();
+
+        // Pega o primeiro pedaço até os dois pontos. ex: Das 10h às 20h
+        String rawFirst = first.split(":")[0];
+        firstTime = getZeroedTime(rawFirst.split(" ")[1]);
+
+        if(doc.size() > 2) { // quer dizer que tem mais de uma sessão
+            String last = doc.get(doc.size() - 1).html();
+            String rawLast = first.split(":")[0]; // ex: Das 10h às 20h
+            lastTime = getZeroedTime(rawFirst.split(" ")[3]); // ex: 20:00
+
+        } else { // quer dizer que só tem uma sessão, daí o horário final pode ser o da primeira.
+            lastTime = getZeroedTime(rawFirst.split(" ")[3]);
+        }
+
+        return new Tuple<String, String>(firstTime, lastTime);
+    }
+
+    public String getZeroedTime(String time) {
+        // Tenho 8h e vira só 8
+        String rawTime = time.replace("h", "");
+        return (rawTime.length() == 1 ? "0" + rawTime : rawTime) + ":00";
     }
 
     public static String getPicture(Document doc) {
@@ -225,8 +256,7 @@ public class FeirasENegociosCrawler {
 
     }
 
-    public static void closeArtistJson(){
-
+    public static void closeArtistJson() {
 
         try {
             outArtists.close();
@@ -234,40 +264,28 @@ public class FeirasENegociosCrawler {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-
-//		File dir = new File(".");
-//		String loc;
-//
-//		FileWriter fstream;
-//		try {
-//			loc = dir.getCanonicalPath() + File.separator + "artistList.txt";
-//
-//			fstream = new FileWriter(loc, true);
-//			BufferedWriter out = new BufferedWriter(fstream);
-//			out.write("{} ]");
-//			//out.newLine();
-//			out.close();
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-
     }
 
-    public static void writeArtist(Artist artist, int count){
+
+    public static void writeEvents(List<Event> events) throws IOException {
+
         File dir = new File(".");
+        ObjectMapper mapper = new ObjectMapper();
+        //Object to JSON in file
+        mapper.writeValue(new File(dir.getCanonicalPath() + File.separator + "events.json"), events.toArray());
+
+        /*File dir = new File(".");
         String loc;
 
         System.out.println("start writting:");
         System.out.println("");
 
         try {
-            loc = dir.getCanonicalPath() + File.separator + "artistList.txt";
+            loc = dir.getCanonicalPath() + File.separator + "events.txt";
 
             FileWriter fstream = new FileWriter(loc, true);
             BufferedWriter out = new BufferedWriter(fstream);
-            out.write(artist.toString());
+            out.write(event.toString());
             out.newLine();
             out.flush();
             fstream.flush();
@@ -275,111 +293,7 @@ public class FeirasENegociosCrawler {
         } catch (IOException e1) {
             // TODO Auto-generated catch block
             e1.printStackTrace();
-        }
-
-
+        }*/
     }
 
-    public static void writeArtistList(){
-        File dir = new File(".");
-        String loc;
-
-        System.out.println("start writting:");
-        System.out.println("");
-
-        try {
-            loc = dir.getCanonicalPath() + File.separator + "artistList.txt";
-            File file = new File(loc);
-            file.delete();
-
-            for(int i=0; i<artistList.size(); i++){
-                String toWrite;
-                if(i==0)toWrite = "[" + artistList.get(i).toString() + ",";
-                else if(i<artistList.size()-1)toWrite = artistList.get(i).toString() + ",";
-                else toWrite = artistList.get(i).toString();
-
-                FileWriter fstream = new FileWriter(loc, true);
-                BufferedWriter out = new BufferedWriter(fstream);
-                out.write(toWrite);
-                out.newLine();
-                out.close();
-
-                System.out.println(toWrite);
-
-            }
-
-        } catch (IOException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-        }
-
-
-    }
-
-    public static String processPageVagalume(String URL) throws IOException {
-        String returnStr = "";
-
-        boolean foundAgenda = false;
-        boolean foundMusicas = false;
-        boolean foundPopularidade = false;
-
-		/*File dir = new File(".");
-		String loc = dir.getCanonicalPath() + File.separator + "record.txt";*/
-
-        // invalid link
-        if (URL.contains(".pdf") || URL.contains("@")
-                || URL.contains("adfad") || URL.contains(":80")
-                || URL.contains("fdafd") || URL.contains(".jpg")
-                || URL.contains(".pdf") || URL.contains(".jpg")
-                || URL.contains(".exe"))
-            return "";
-
-        // process the url first
-        if(URL.contains("agenda/")) foundAgenda = true;
-        if(URL.contains("popularidade/"))foundPopularidade = true;
-        if (URL.contains("www.sites.vagalume.com.br") && !URL.endsWith("/")) {
-
-        } else if(URL.contains("http://www.sites.vagalume.com.br") && URL.endsWith("/")){
-            URL = URL.substring(0, URL.length()-1);
-        }else{
-            // url of other site -> do nothing
-            return "";
-        }
-
-
-        Document doc = null;
-        try {
-            doc = Jsoup.connect(URL).timeout(120*1000).get();
-        } catch (IOException e1) {
-            e1.printStackTrace();
-            return "";
-        }
-
-        if (doc.text().contains("Agenda de Shows")) {
-        }
-        if(foundPopularidade){
-            System.out.println(URL);
-            if(doc.text().contains("popularidade em seu site.")){
-                String[] splitSite = doc.text().split("popularidade em seu site.");
-                String rank = splitSite[1].split("ranking")[0];
-                returnStr = rank;
-                System.out.println(rank);
-            }
-
-
-        }
-
-        return returnStr.trim();
-
-    }
-
-
-    public static String getArtistName(String url){
-        String aux = url.substring(url.indexOf("www"));
-        String name = aux.split("/")[1];
-        System.out.println("nome"+name);
-
-        return name;
-
-    }
 }

@@ -3,12 +3,12 @@ package model;
 /**
  * Created by inafalcao on 2/19/17.
  */
-public class Local {
+public class Local extends ObjectJson {
 
-    private String address;
-    private String state;
-    private String city;
-    private long postalCode;
+    public String address;
+    public String state;
+    public String city;
+    public long postalCode;
 
     /*
     case class Local(name: Option[String] = None,

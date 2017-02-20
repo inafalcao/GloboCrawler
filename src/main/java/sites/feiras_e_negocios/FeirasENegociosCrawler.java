@@ -1,10 +1,12 @@
 package sites.feiras_e_negocios;
 
 import model.Artist;
+import model.Local;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import util.Tuple;
 
 import javax.print.Doc;
 import java.io.*;
@@ -77,12 +79,12 @@ public class FeirasENegociosCrawler {
 
     public void processListPage(String URL, int round) throws IOException {
 
-        URL = URL + "?page=" + round;
+        String pageURL = URL + "?page=" + round;
 
         // Get list of event pages
         Document doc = null;
         try {
-            doc = Jsoup.connect(URL).userAgent("Mozilla").timeout(120*1000).get();
+            doc = Jsoup.connect(pageURL).userAgent("Mozilla").timeout(120*1000).get();
         } catch (IOException e1) {
             return;
         }
@@ -93,10 +95,12 @@ public class FeirasENegociosCrawler {
             String mLink = link.attr("abs:href");
             processEventPage(mLink);
         }
+
+        processListPage(URL, round + 1);
     }
 
     public void processEventPage(String url) {
-        // Get list of event pages
+
         Document doc = null;
         try {
             doc = Jsoup.connect(url).userAgent("Mozilla").timeout(120*1000).get();
@@ -106,9 +110,11 @@ public class FeirasENegociosCrawler {
 
         String eventName = doc.getElementsByClass("title").text();
         String eventDescription = getEventDesctiption(doc);
-        String eventPicture 
-
-
+        String eventPicture = getEventPicture(doc);
+        Tuple<String, String> eventDateTime = getEventDateTime(doc);
+        String dateBegin = eventDateTime.getLeft();
+        String dateEnd = eventDateTime.getRight();
+        Local eventLocal = getEventLocal(doc);
     }
 
     private String getEventDesctiption(Document doc) {
@@ -121,6 +127,37 @@ public class FeirasENegociosCrawler {
         }
 
         return paragraphStrings;
+    }
+
+    private String getEventPicture(Document doc) {
+        Element img = doc.select("aside").first()
+                         .select("picture").first()
+                         .select("img").first();
+        String picture = img.attr("src");
+        return picture;
+    }
+
+    /**
+     * Como faltam informações de ingresso, cadastrar sessão única.
+     */
+    private Tuple<String, String> getEventDateTime(Document doc) {
+        // Das 10h às 19h: 10 de Março a 19 de Março de 2017
+
+        // Left = beginTime; Right = endTime
+        Tuple<String, String> tuple = new Tuple<String, String>("", "");
+
+
+        return tuple;
+    }
+
+    private Local getEventLocal(Document doc) {
+        Element location = doc.select("article").first();
+        String locationName = location.select("strong").first().html();
+        location.select("strong").first().remove();
+
+        String theRest = location.html();
+        // parse somehow
+        return new Local();
     }
 
     public static Artist getArtist(ArrayList<String> list) {

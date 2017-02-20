@@ -10,9 +10,6 @@ public class Local {
     private String city;
     private long postalCode;
 
-
-
-
     /*
     case class Local(name: Option[String] = None,
                  site: Option[String] = None,

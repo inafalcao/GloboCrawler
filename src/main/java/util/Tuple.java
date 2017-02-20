@@ -27,4 +27,5 @@ public class Tuple<L, R> {
         return this.left.equals(pairo.getLeft()) &&
                 this.right.equals(pairo.getRight());
     }
+
 }

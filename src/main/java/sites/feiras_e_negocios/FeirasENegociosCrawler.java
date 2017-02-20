@@ -1,5 +1,6 @@
 package sites.feiras_e_negocios;
 
+import enumeration.Mes;
 import model.Artist;
 import model.Local;
 import org.jsoup.Jsoup;
@@ -89,12 +90,16 @@ public class FeirasENegociosCrawler {
             return;
         }
 
+        String test = Mes.getZeroedMonthByName("Fevereiro");
+
         Elements linksElements = doc.getElementsByClass("read-more-button");
         List<String> links = new ArrayList<String>();
         for(Element link : linksElements) {
             String mLink = link.attr("abs:href");
             processEventPage(mLink);
         }
+
+
 
         processListPage(URL, round + 1);
     }

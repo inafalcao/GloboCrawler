@@ -111,7 +111,7 @@ public class FeirasENegociosCrawler {
         event.setCensorship("livre");
         event.setOnlyExhibition(true);
         // todo: categorias
-        
+
 
         // Os 'transientes'
         event.setBanner(eventPicture);
@@ -172,10 +172,16 @@ public class FeirasENegociosCrawler {
 
         // E aí?
         Local local = new Local();
-        local.setAddress(address);
-        local.setPostalCode(Long.parseLong(cep));
-        local.setCity(city);
-        local.setState(city); // só porque é sp, né.
+        local.name = locationName;
+        local.address = address;
+        local.state = "SP"; // só porque é sp, né.
+        local.city = city;
+        local.cityName = city;
+        local.cityUF = "SP";
+        local.postalCode = Long.parseLong(cep);
+        local.totalCapacity = 1000; // qualquer valor.
+        local.lat = 1000;
+        local.lng = 1000;
 
         return local;
     }
@@ -244,7 +250,6 @@ public class FeirasENegociosCrawler {
     }
 
     public static void openArtistJson(){
-
         try {
             locArtistis = dir.getCanonicalPath() + File.separator + "eventList.txt";
             new File(locArtistis).delete();
@@ -257,7 +262,6 @@ public class FeirasENegociosCrawler {
     }
 
     public static void closeArtistJson() {
-
         try {
             outArtists.close();
             fstreamArtists.close();
@@ -266,34 +270,10 @@ public class FeirasENegociosCrawler {
         }
     }
 
-
     public static void writeEvents(List<Event> events) throws IOException {
-
         File dir = new File(".");
         ObjectMapper mapper = new ObjectMapper();
-        //Object to JSON in file
         mapper.writeValue(new File(dir.getCanonicalPath() + File.separator + "events.json"), events.toArray());
-
-        /*File dir = new File(".");
-        String loc;
-
-        System.out.println("start writting:");
-        System.out.println("");
-
-        try {
-            loc = dir.getCanonicalPath() + File.separator + "events.txt";
-
-            FileWriter fstream = new FileWriter(loc, true);
-            BufferedWriter out = new BufferedWriter(fstream);
-            out.write(event.toString());
-            out.newLine();
-            out.flush();
-            fstream.flush();
-
-        } catch (IOException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-        }*/
     }
 
 }

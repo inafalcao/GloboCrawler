@@ -1,0 +1,25 @@
+{
+  "name": "orchestra_crawler",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "babel main.js --out-file bundle.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/inafalcao/GloboCrawler.git"
+  },
+  "author": "Inaciane Monteiro",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/inafalcao/GloboCrawler/issues"
+  },
+  "homepage": "https://github.com/inafalcao/GloboCrawler#readme",
+  "devDependencies": {
+    "axios": "^0.15.3",
+    "babel-cli": "^6.23.0",
+    "babel-preset-es2015": "^6.22.0"
+  }
+}

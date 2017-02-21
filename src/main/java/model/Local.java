@@ -5,10 +5,17 @@ package model;
  */
 public class Local extends ObjectJson {
 
+    public String name;
     public String address;
     public String state;
     public String city;
+    public String cityName;
+    public String cityUF;
     public long postalCode;
+
+    public int totalCapacity; // required
+    public float lat; // required
+    public float lng; // required
 
     /*
     case class Local(name: Option[String] = None,
@@ -26,7 +33,20 @@ public class Local extends ObjectJson {
                  timeZoneId: Option[String])
      */
 
-    public String getAddress() {
+    /*"{"lat":-23.5417974,
+            "lng":-46.629501300000015,
+            "address":"Rua Cantareira, 306 - Centro, São Paulo",
+            "site":"http://www.saopaulo.sp.gov.br/",
+            "name":"Mercado Municipal de São Paulo",
+            "city":"São Paulo",
+            "state":"São Paulo",
+            "postalCode":1103200,
+            "totalCapacity":2000,
+            "cityUF":"SP",
+            "cityName":"São Paulo"
+}"*/
+
+    /*public String getAddress() {
         return address;
     }
 
@@ -56,5 +76,5 @@ public class Local extends ObjectJson {
 
     public void setPostalCode(long postalCode) {
         this.postalCode = postalCode;
-    }
+    }*/
 }

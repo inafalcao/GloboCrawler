@@ -10,7 +10,7 @@ public class Local extends ObjectJson {
     public String state;
     public String city;
     public String cityName;
-    public String cityUF;
+    public String cityUf;
     public long postalCode;
 
     public int totalCapacity; // required

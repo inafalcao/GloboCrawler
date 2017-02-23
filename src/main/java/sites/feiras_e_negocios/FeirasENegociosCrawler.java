@@ -2,9 +2,7 @@ package sites.feiras_e_negocios;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import enumeration.Mes;
-import model.Artist;
-import model.Event;
-import model.Local;
+import model.*;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -55,9 +53,9 @@ public class FeirasENegociosCrawler {
         closeArtistJson();
     }
 
-    public void processListPage(String URL, int round, List<Event> events) throws IOException {
+    public void processListPage(String URL, int round, List<EventData> events) throws IOException {
         if(events == null) {
-            events = new ArrayList<Event>();
+            events = new ArrayList<EventData>();
         }
 
         String pageURL = URL + "?page=" + round;
@@ -84,7 +82,7 @@ public class FeirasENegociosCrawler {
         processListPage(URL, round + 1, events);
     }
 
-    public Event processEventPage(String url) {
+    public EventData processEventPage(String url) {
 
         Document doc = null;
         try {
@@ -102,22 +100,31 @@ public class FeirasENegociosCrawler {
         Local eventLocal = getEventLocal(doc);
 
         Event event = new Event();
-        event.setName(eventName);
-        event.setRelease(eventDescription);
-        event.setBengin(dateBegin);
-        event.setEnd(dateEnd);
-        event.setBeginSales(dateBegin);
-        event.setEndSales(dateEnd);
-        event.setCensorship("livre");
-        event.setOnlyExhibition(true);
-        // todo: categorias
-
 
         // Os 'transientes'
         event.setBanner(eventPicture);
         event.setLocal(eventLocal);
 
-        return event;
+        event.setName(eventName);
+        event.setRelease(eventDescription);
+        event.setBegin(dateBegin);
+        event.setEnd(dateEnd);
+        event.setBeginSales(dateBegin);
+        event.setEndSales(dateEnd);
+        event.setCensorship("livre");
+        event.setOnlyExhibition(true);
+        event.setCityUF(event.local.cityUf);
+        event.setCityName(event.local.cityName);
+        // todo: categorias
+
+        Session session = new Session(dateBegin, dateEnd, dateBegin, dateEnd);
+        session.addSector(new Sector("Setor Único"));
+        List<Session> sessions = new ArrayList<Session>(1);
+        sessions.add(session);
+
+        EventData eventData = new EventData(event, sessions, "America/Sao_Paulo");
+
+        return eventData;
     }
 
     private String getEventDesctiption(Document doc) {
@@ -151,8 +158,8 @@ public class FeirasENegociosCrawler {
         Tuple<String, String> date = parseDate(times.first().html());
         Tuple<String, String> time = parseTime(times);
 
-        String beginDate = date.getLeft() + "T" + time.getLeft();
-        String endDate = date.getRight() + "T" + time.getRight();
+        String beginDate = date.getLeft() + "T" + time.getLeft() + ":00-03";
+        String endDate = date.getRight() + "T" + time.getRight() + ":00-03";
 
         return new Tuple<String, String>(beginDate, endDate);
     }
@@ -174,10 +181,11 @@ public class FeirasENegociosCrawler {
         Local local = new Local();
         local.name = locationName;
         local.address = address;
-        local.state = "SP"; // só porque é sp, né.
+        local.state = city; // só porque é sp, né.
+        local.cityUf = "SP";
         local.city = city;
         local.cityName = city;
-        local.cityUF = "SP";
+        local.cityUf = "SP";
         local.postalCode = Long.parseLong(cep);
         local.totalCapacity = 1000; // qualquer valor.
         local.lat = 1000;
@@ -270,7 +278,7 @@ public class FeirasENegociosCrawler {
         }
     }
 
-    public static void writeEvents(List<Event> events) throws IOException {
+    public static void writeEvents(List<EventData> events) throws IOException {
         File dir = new File(".");
         ObjectMapper mapper = new ObjectMapper();
         mapper.writeValue(new File(dir.getCanonicalPath() + File.separator + "events.json"), events.toArray());

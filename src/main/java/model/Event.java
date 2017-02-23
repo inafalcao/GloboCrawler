@@ -9,22 +9,24 @@ public class Event extends ObjectJson {
 
     public String name; // required
     public String censorship; // required
-    public String bengin; // required
+    public String begin; // required
     public String end; // required
     public String beginSales; // required
     public String endSales; // required
     public long eventTypeId; // required / hard code
-    public long producerId; // required / hard code
+    public long producerId = 59; // required / hard code
     public String release; // required
     public long localId; // required
-    public String photoBannerPrefix; // required
-    public String photoBannerSuffix; // required
+    public PhotoBanner photoBanner = new PhotoBanner(); //todo
+    //public String photoBannerPrefix; // required
+    //public String photoBannerSuffix; // required
     public long cityId; // required
     public String cityName; // required
     public String cityUF; // required
     public boolean onlyExhibition; // required
     public List<String> categories; // required
     public int statusId; // required
+    public EventType eventType = new EventType();
 
 
     // Estes são como campos transientes
@@ -51,12 +53,12 @@ public class Event extends ObjectJson {
         this.censorship = censorship;
     }
 
-    public String getBengin() {
-        return bengin;
+    public String getBegin() {
+        return begin;
     }
 
-    public void setBengin(String bengin) {
-        this.bengin = bengin;
+    public void setBegin(String bengin) {
+        this.begin = bengin;
     }
 
     public String getEnd() {
@@ -115,7 +117,7 @@ public class Event extends ObjectJson {
         this.localId = localId;
     }
 
-    public String getPhotoBannerPrefix() {
+    /*public String getPhotoBannerPrefix() {
         return photoBannerPrefix;
     }
 
@@ -130,7 +132,7 @@ public class Event extends ObjectJson {
     public void setPhotoBannerSuffix(String photoBannerSuffix) {
         this.photoBannerSuffix = photoBannerSuffix;
     }
-
+*/
     public long getCityId() {
         return cityId;
     }

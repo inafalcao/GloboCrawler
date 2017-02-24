@@ -5,44 +5,145 @@ var imagemagick = require('imagemagick-native');
 var fs = require('fs');
 var request = require('request');
 var FormData = require('form-data');
+//require('babel-polyfill');
 
-var fileName = 'temp.png';
+axios.defaults.baseURL = 'http://localhost:9000';
+axios.defaults.headers.post['Content-Type'] = 'application/json';
+axios.defaults.headers.common['Accept'] = 'application/json';
+
+var URL_INSERT_LOCAL = '/locals/create';
+var URL_CITY = '/locals/city';
+var URL_LOGIN = '/login';
+var URL_LOCAL = '/locals/search';
+var URL_CREATE_SECTORS = '/blueprint/sectors';
+var URL_CREATE_EVENT = '/event/create';
+
+var token = '';
+var fileName = 'temp.jpg';
+
+var credentials = { key: 'inafalcao@gmail.com', password: '83a4d8be816c962698fe7bf46139f1aa' };
+axios.post(URL_LOGIN, credentials).then(function (response) {
+    console.log('success login');
+    token = response.data.result.token;
+    axios.defaults.headers.common['X-AUTH-TOKEN'] = response.data.result.token;
+}).catch(function (error) {
+    console.log('Erro ao logar');
+    console.log(error.data);
+});
+
+setTimeout(function () {
+    return insertEvents();
+}, 1000);
+
+function insertEvents() {
+    console.log('aqui.');
+    var events = require('./events.json');
+    events.forEach(function (e) {
+        return insertLocal(e);
+    });
+}
+
+function insertLocal(eventData) {
+    // [1] Inserir o local e recuperar seu ID
+    axios.post(URL_INSERT_LOCAL, eventData.event.local).then(function (response) {
+        console.log('Iseriu local ' + eventData.event.local.name);
+        return findCityAndLocal(eventData);
+    }).catch(function (error) {
+        console.log('deu erro em tudo');
+        console.log(error.response.status);
+        return findCityAndLocal(eventData);
+    });
+}
+
+function findCityAndLocal(eventData) {
+    console.log('vendo se entrou');
+    axios.all([axios.get(encodeURI(URL_CITY + '/' + eventData.event.cityName + '/' + eventData.event.cityUF)), axios.get(encodeURI(URL_LOCAL + '?q=' + eventData.event.local.name))]).then(axios.spread(function (cityRes, localRes) {
+        console.log('City Res: ', cityRes.data.result.id);
+        console.log('Local Res: ', localRes.data.result.id);
+        eventData.event.localId = localRes.data.result.id;
+        eventData.event.local.id = localRes.data.result.id;
+        eventData.event.cityId = localRes.data.result.id;
+        return insertSector(eventData);
+    })).catch(function (error) {
+        cosole.log('Erro findCityAndLocal', error);
+    });
+}
+
+function insertSector(eventData) {
+    var sector = { name: eventData.sessions[0].sectors[0].name, localId: eventData.event.localId };
+    var sectors = { sectors: [sector] };
+    console.log('insertSector');
+    axios.post(URL_CREATE_SECTORS, sectors).then(function (res) {
+        console.log('Sector inserted', res.data.result[0].id);
+        eventData.sessions[0].sectors[0].id = res.data.result[0].id;
+        console.log(eventData);
+        download(eventData.event.banner, fileName, function () {
+            console.log('done');
+            setTimeout(function () {
+                cropImage.then(function (response) {
+                    delete eventData.event.banner;
+                    eventData.event.photoBanner.prefix = response.prefix;
+                    eventData.event.photoBanner.suffix = response.suffix;
+                    console.log('deu tudo certo');
+                }).catch(function (error) {
+                    console.log('veish');
+                });
+            }, 1000);
+        });
+    }).catch(function (error) {
+        console.log('Error insert sector', error.response.status);
+    });
+}
+
+function insertEventAndSessions(eventData) {
+    console.log('Inserting Event');
+    axios.post(URL_CREATE_EVENT, eventData).then(function (res) {
+        return console.log(res.data);
+    }).catch(function (error) {
+        return console.log('Error insert Event', error.response);
+    });
+}
+
+/* ============== DOWNLOAD/CROP/UPLOAD ==================== */
+
 var download = function download(uri, filename, callback) {
     request.head(uri, function (err, res, body) {
-        console.log('content-type:', res.headers['content-type']);
-        console.log('content-length:', res.headers['content-length']);
+        //console.log('content-type:', res.headers['content-type']);
+        //console.log('content-length:', res.headers['content-length']);
         request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
     });
 };
 
-download('http://images.feirasenegocios.com.br/kWKVGiXVvCPA5VC6UH6rQvoNGZM=/351x0/top/media.feirasenegocios.com.br/media/archives/2017/02/14/2784652102-expo-revestir-2017.jpg', fileName, function () {
-    console.log('done');
-    setTimeout(cropImage, 1000);
-});
+/*download('testeminin', fileName, function(){
+  console.log('done');
+  setTimeout(cropImage, 1000);
+});*/
 
-function uploadBanner() {
+var uploadBanner = new Promise(function (resolve, reject) {
     console.log('Upload Banner');
     var fd = new FormData();
+    //var buffer = new Buffer(file.data, 'utf-8');
+    var file1 = fs.createReadStream('blob_4x3.jpg');
+    var file2 = fs.createReadStream('blob_16x9.jpg');
 
-    setTimeout(function () {
-        fd.append('upload_4x3', fs.readFileSync('blob_4x3.jpg'), 'blob_4x3.jpg');
-        fd.append('upload_16x9', fs.readFileSync('blob_16x9.jpg'), 'blob_16x9.jpg');
-    }, 3000);
+    fd.append('upload_4x3', file1, 'blob_4x3.jpg');
+    fd.append('upload_16x9', file2, 'blob_16x9.jpg');
 
-    var config = { headers: { 'Content-Type': 'multipart/form-data' } };
-
-    var URL_UPLOAD_BANNER = '/event/upload';
-
-    axios.post(URL_UPLOAD_BANNER, fd, config).then(function (res) {
-        return console.log('Banner Uploaded', res.data);
-    }).catch(function (err) {
-        return console.log('Error upload banner', err);
+    var r = request.post('http://localhost:9000/event/upload', { headers: { 'X-AUTH-TOKEN': token } }, function optionalCallback(err, httpResponse, body) {
+        if (err) {
+            reject('Error uploading banner');
+            //return console.error('upload failed:', err);
+        }
+        resolve(body);
+        //console.log('Upload successful!  Server responded with:', body);
     });
-}
+    var form = r.form();
+    form.append('upload_4x3', file1, 'blob_4x3.jpg');
+    form.append('upload_16x9', file2, 'blob_16x9.jpg');
+});
 
-function cropImage() {
+var cropImage = new Promise(function (resolve, reject) {
     console.log('Crop Image');
-    //getImageDimensions('temp.png');
 
     imagemagick.identify({
         srcData: fs.readFileSync(fileName)
@@ -58,10 +159,6 @@ function cropImage() {
 
         var newWidth4x3 = min === width ? width : min / ratio4x3;
         var newHeight4x3 = min === height ? height : min / ratio4x3;
-
-        /*console.log('newWidth', newWidth16x9);
-        console.log('newHeight', newHeight16x9);
-        console.log('ratio:', newWidth16x9/newHeight16x9);*/
 
         fs.writeFileSync('blob_16x9.jpg', imagemagick.convert({
             srcData: fs.readFileSync(fileName),
@@ -79,110 +176,10 @@ function cropImage() {
             gravity: 'Center'
         }));
 
-        uploadBanner();
+        uploadBanner.then(function (res) {
+            return resolve({ prefix: res.result.prefix, suffix: res.result.suffix });
+        }, function (err) {
+            return reject(err);
+        });
     });
-};
-
-/*var file = fs.createWriteStream("temp.jpg");
-getFile.get('http://images.feirasenegocios.com.br/kWKVGiXVvCPA5VC6UH6rQvoNGZM=/351x0/top/media.feirasenegocios.com.br/media/archives/2017/02/14/2784652102-expo-revestir-2017.jpg')
-.then(function(response) {
-    fs.writeFile('logo.jpg', response.data, function(err){
-            if (err) throw err
-            console.log('File saved.')
-    });
-  console.log('opa');
-  console.log(response);
-})
-.catch(error => {
-    console.log(error);
-});*/
-
-/*
-headers: {
-    'Content-Type': imageFile.type
-}
-headers: { 'content-type': 'multipart/form-data' }
-*/
-
-axios.defaults.baseURL = 'http://localhost:9000';
-axios.defaults.headers.post['Content-Type'] = 'application/json';
-axios.defaults.headers.common['Accept'] = 'application/json';
-
-var URL_INSERT_LOCAL = '/locals/create';
-var URL_CITY = '/locals/city';
-var URL_LOGIN = '/login';
-var URL_LOCAL = '/locals/search';
-var URL_CREATE_SECTORS = '/blueprint/sectors';
-var URL_CREATE_EVENT = '/event/create';
-
-var credentials = { key: 'inafalcao@gmail.com', password: '83a4d8be816c962698fe7bf46139f1aa' };
-axios.post(URL_LOGIN, credentials).then(function (response) {
-    axios.defaults.headers.common['X-AUTH-TOKEN'] = response.data.result.token;
-}).catch(function (error) {
-    console.log('Erro ao logar');
-    console.log(error.data);
 });
-
-/*setTimeout(() => { insertEvents(); }, 3000)
-
-function insertEvents() {
-    var events = require('./events.json');
-    events.forEach( e => insertLocal(e) );
-}
-
-function insertLocal(eventData) {
-    // [1] Inserir o local e recuperar seu ID
-    axios.post(URL_INSERT_LOCAL, eventData.event.local)
-    .then(response => {
-       console.log('Iseriu local ' + eventData.event.local.name);
-       return findCityAndLocal(eventData);
-     })
-     .catch(function (error) {
-       console.log('deu erro em tudo');
-       console.log(error.response.status)
-       return findCityAndLocal(eventData);
-     });
-
-}
-
-function findCityAndLocal(eventData) {
-    console.log('vendo se entrou');
-    axios.all([
-        axios.get(encodeURI(URL_CITY + '/' + eventData.event.cityName + '/' + eventData.event.cityUF)),
-        axios.get(encodeURI(URL_LOCAL + '?q=' + eventData.event.local.name))
-      ])
-      .then(axios.spread( (cityRes,  localRes) => {
-        console.log('City Res: ', cityRes.data.result.id);
-        console.log('Local Res: ', localRes.data.result.id);
-        eventData.event.localId = localRes.data.result.id;
-        eventData.event.local.id = localRes.data.result.id;
-        eventData.event.cityId = localRes.data.result.id;
-        return insertSector(eventData);
-      }))
-      .catch(error => {
-        cosole.log('Erro findCityAndLocal', error);
-      });
-}
-
-function insertSector(eventData) {
-    var sector = { name: eventData.sessions[0].sectors[0].name, localId: eventData.event.localId } ;
-    var sectors = {sectors: [sector]} ;
-    console.log('insertSector');
-    axios.post(URL_CREATE_SECTORS, sectors)
-    .then(res => {
-        console.log('Sector inserted', res.data.result[0].id);
-        eventData.sessions[0].sectors[0].id = res.data.result[0].id;
-        insertEventAndSessions(eventData);
-    })
-    .catch(error => {
-        console.log('Error insert sector', error.response.status);
-    });
-}
-
-function insertEventAndSessions(eventData) {
-    console.log('Inserting Event');
-    axios.post(URL_CREATE_EVENT, eventData)
-    .then(res => console.log(res.data) )
-    .catch(error => console.log('Error insert Event', error.response) );
-}
-*/
